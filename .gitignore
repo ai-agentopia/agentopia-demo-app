@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/install-state.gz
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+*.lcov
+
+# Misc
+*.log
+npm-debug.log*

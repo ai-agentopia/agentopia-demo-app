@@ -1,0 +1,33 @@
+version: "1"
+stack: "typescript"
+
+ignore_paths:
+  - "*.lock"
+  - "dist/**"
+  - "build/**"
+  - "node_modules/**"
+  - ".next/**"
+  - "public/fonts/**"
+  - "public/images/**"
+
+high_risk_patterns:
+  - pattern: "src/lib/auth*"
+    concern: "authentication change"
+    lane: security
+  - pattern: "src/lib/db*"
+    concern: "database access change"
+    lane: security
+  - pattern: "*.sql"
+    concern: "schema change"
+    lane: schema
+  - pattern: "src/app/api/**"
+    concern: "API endpoint change"
+    lane: security
+
+enabled_lanes:
+  - security
+  - schema
+
+max_diff_files: 50
+max_inline_comments: 5
+severity_threshold: medium

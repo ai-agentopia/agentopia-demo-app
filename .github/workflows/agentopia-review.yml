@@ -1,0 +1,69 @@
+# Agentopia PR Review — automated code review by AI bot team
+#
+# Prerequisites:
+#   1. .agentopia/review-policy.yml committed to the repo
+#   2. AGENTOPIA_REVIEW_TOKEN secret configured in repo settings
+#   3. AGENTOPIA_REVIEW_ENDPOINT secret configured (Agentopia API URL)
+
+name: Agentopia PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  review:
+    name: Agentopia Review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Trigger Agentopia Review
+        env:
+          AGENTOPIA_ENDPOINT: ${{ secrets.AGENTOPIA_REVIEW_ENDPOINT }}
+          AGENTOPIA_TOKEN: ${{ secrets.AGENTOPIA_REVIEW_TOKEN }}
+        run: |
+          if [ -z "$AGENTOPIA_ENDPOINT" ] || [ -z "$AGENTOPIA_TOKEN" ]; then
+            echo "::warning::Agentopia secrets not configured. Skipping review."
+            exit 0
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$AGENTOPIA_ENDPOINT" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $AGENTOPIA_TOKEN" \
+            -d '{
+              "repo_owner": "${{ github.repository_owner }}",
+              "repo_name": "${{ github.event.repository.name }}",
+              "pr_number": ${{ github.event.pull_request.number }},
+              "event_type": "${{ github.event.action }}",
+              "base_sha": "${{ github.event.pull_request.base.sha }}",
+              "head_sha": "${{ github.event.pull_request.head.sha }}",
+              "actor": "${{ github.actor }}"
+            }')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response: $BODY"
+          echo "HTTP Status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" -ge 500 ]; then
+            echo "::warning::Agentopia review service error (HTTP $HTTP_CODE). Review skipped."
+            exit 0
+          fi
+
+          if [ "$HTTP_CODE" -eq 409 ]; then
+            echo "Review already in progress. Skipping duplicate."
+            exit 0
+          fi
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Review triggered successfully."
+          else
+            echo "::warning::Unexpected response (HTTP $HTTP_CODE). Review may not have started."
+          fi
