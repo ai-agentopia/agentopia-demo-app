@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
 // API keys loaded from environment variables — never hardcode secrets in source
-const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
-const GEO_API_KEY = import.meta.env.VITE_GEO_API_KEY;
+// See .env.example for required variable names
+const API_KEY = process.env.NEXT_PUBLIC_WEATHER_API_KEY;
+const GEO_API_KEY = process.env.NEXT_PUBLIC_GEO_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 function WeatherPage() {
@@ -13,12 +14,13 @@ function WeatherPage() {
 
   useEffect(() => {
     let cancelled = false;
+
     setLoading(true);
     setError(null);
 
     fetch(`${BASE_URL}/weather?q=${city}&appid=${API_KEY}&units=metric`)
       .then(res => {
-        if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return res.json();
       })
       .then(data => {
@@ -34,10 +36,7 @@ function WeatherPage() {
         }
       });
 
-    // Cleanup: prevent state updates after unmount
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [city]);
 
   return (
@@ -50,9 +49,8 @@ function WeatherPage() {
         placeholder="Enter city"
       />
 
-      {loading && <p>Loading weather data…</p>}
+      {loading && <p>Loading weather data...</p>}
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-
       {!loading && !error && weather && (
         <div>
           <h2>{weather.name}</h2>
@@ -71,12 +69,13 @@ function GeoLookup({ coords }) {
 
   useEffect(() => {
     let cancelled = false;
+
     setLoading(true);
     setError(null);
 
     fetch(`https://api.geocode.io/v1.7/reverse?q=${coords}&api_key=${GEO_API_KEY}`)
       .then(res => {
-        if (!res.ok) throw new Error(`Geo API error: ${res.status}`);
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return res.json();
       })
       .then(data => {
@@ -92,16 +91,13 @@ function GeoLookup({ coords }) {
         }
       });
 
-    // Cleanup: prevent state updates after unmount
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [coords]);
 
   return (
     <div>
-      {loading && <p>Looking up location…</p>}
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+      {loading && <p>Looking up location...</p>}
+      {error && <p style={{ color: 'red' }}>Geo error: {error}</p>}
       {!loading && !error && location && (
         <p>Address: {location.results[0].formatted_address}</p>
       )}
