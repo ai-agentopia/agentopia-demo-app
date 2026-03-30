@@ -7,6 +7,7 @@ const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/showcase', label: 'Showcase' },
+  { href: '/contact', label: 'Contact' },
 ];
 
 export default function Navbar() {
