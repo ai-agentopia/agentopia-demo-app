@@ -1,25 +1,45 @@
 import React, { useState, useEffect } from 'react';
 
-// API keys stored directly in code (bad practice)
-const API_KEY = 'sk-weather-abc123secretkey9999';
-const GEO_API_KEY = 'geo-XYZ987supersecret0000';
+// API keys loaded from environment variables — never hardcode secrets in source
+const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
+const GEO_API_KEY = import.meta.env.VITE_GEO_API_KEY;
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 function WeatherPage() {
   const [city, setCity] = useState('London');
   const [weather, setWeather] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // No async/await — raw promise chain with no error handling
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
     fetch(`${BASE_URL}/weather?q=${city}&appid=${API_KEY}&units=metric`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`Weather API error: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
-        setWeather(data);
+        if (!cancelled) {
+          setWeather(data);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
       });
-    // No .catch() — errors are silently swallowed
+
+    // Cleanup: prevent state updates after unmount
+    return () => {
+      cancelled = true;
+    };
   }, [city]);
 
-  // No loading state — just renders null while data is absent
   return (
     <div>
       <h1>Weather Dashboard</h1>
@@ -30,8 +50,10 @@ function WeatherPage() {
         placeholder="Enter city"
       />
 
-      {/* No loading indicator at all */}
-      {weather && (
+      {loading && <p>Loading weather data…</p>}
+      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+
+      {!loading && !error && weather && (
         <div>
           <h2>{weather.name}</h2>
           <p>Temp: {weather.main.temp}°C</p>
@@ -42,20 +64,47 @@ function WeatherPage() {
   );
 }
 
-// Second fetch call — also bad, using another hardcoded key
 function GeoLookup({ coords }) {
   const [location, setLocation] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
     fetch(`https://api.geocode.io/v1.7/reverse?q=${coords}&api_key=${GEO_API_KEY}`)
-      .then(res => res.json())
-      .then(data => setLocation(data));
-    // Again: no .catch, no loading state
+      .then(res => {
+        if (!res.ok) throw new Error(`Geo API error: ${res.status}`);
+        return res.json();
+      })
+      .then(data => {
+        if (!cancelled) {
+          setLocation(data);
+          setLoading(false);
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
+      });
+
+    // Cleanup: prevent state updates after unmount
+    return () => {
+      cancelled = true;
+    };
   }, [coords]);
 
   return (
     <div>
-      {location && <p>Address: {location.results[0].formatted_address}</p>}
+      {loading && <p>Looking up location…</p>}
+      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+      {!loading && !error && location && (
+        <p>Address: {location.results[0].formatted_address}</p>
+      )}
     </div>
   );
 }
